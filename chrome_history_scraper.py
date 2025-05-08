@@ -4,8 +4,9 @@ import requests
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
+import re
 
 def get_chrome_history_path():
     """Get the path to Chrome's history database."""
@@ -72,6 +73,17 @@ def extract_text_from_url(url):
     except Exception as e:
         return f"Error extracting text: {str(e)}"
 
+def sanitize_filename(filename):
+    """Remove invalid characters from filename."""
+    # Replace invalid characters with underscore
+    invalid_chars = r'[<>:"/\\|?*]'
+    sanitized = re.sub(invalid_chars, '_', filename)
+    # Remove multiple consecutive underscores
+    sanitized = re.sub(r'_+', '_', sanitized)
+    # Remove leading/trailing underscores
+    sanitized = sanitized.strip('_')
+    return sanitized
+
 def main():
     try:
         # Get URLs from history
@@ -86,13 +98,15 @@ def main():
         results = []
         for url, title, visit_time in tqdm(urls, desc="Scraping websites"):
             # Convert Chrome timestamp to readable format
-            visit_time = datetime(1601, 1, 1) + time.timedelta(microseconds=visit_time)
+            visit_time = datetime(1601, 1, 1) + timedelta(microseconds=visit_time)
             
             print(f"\nProcessing: {url}")
             text = extract_text_from_url(url)
             
-            # Save individual file
-            filename = f"{output_dir}/{title[:50]}_{visit_time.strftime('%Y%m%d_%H%M%S')}.txt"
+            # Sanitize the title for filename
+            safe_title = sanitize_filename(title[:50])
+            filename = f"{output_dir}/{safe_title}_{visit_time.strftime('%Y%m%d_%H%M%S')}.txt"
+            
             with open(filename, 'w', encoding='utf-8') as f:
                 f.write(f"URL: {url}\n")
                 f.write(f"Title: {title}\n")
