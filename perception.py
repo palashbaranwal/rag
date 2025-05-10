@@ -1,5 +1,9 @@
 from pydantic import BaseModel
 from typing import Optional
+from logger_config import setup_logger
+
+# Set up logger
+logger = setup_logger("perception")
 
 class SearchIntent(BaseModel):
     query: str
@@ -13,6 +17,7 @@ def extract_perception(query: str) -> SearchIntent:
     - Regular search queries
     - History requests (if query contains 'history' or 'recent')
     """
+    logger.info(f"Extracting intent from query: {query}")
     query = query.lower().strip()
     
     # Check if it's a history request
@@ -21,8 +26,11 @@ def extract_perception(query: str) -> SearchIntent:
     # Default to 3 results unless specified
     num_results = 3
     
-    return SearchIntent(
+    intent = SearchIntent(
         query=query,
         is_history_request=is_history_request,
         num_results=num_results
-    ) 
+    )
+    
+    logger.info(f"Extracted intent: {intent.dict()}")
+    return intent 

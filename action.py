@@ -1,12 +1,18 @@
 from typing import List
 from models import SearchQuery, SearchResult, SearchResponse
 from memory import MemoryManager
+from logger_config import setup_logger
+
+# Set up logger
+logger = setup_logger("action")
 
 def execute_search(
     query: SearchQuery,
     memory: MemoryManager
 ) -> SearchResponse:
     """Execute the search and return formatted results."""
+    logger.info(f"Executing search for query: {query.query_text}")
+    
     # Perform the search
     results = memory.search(query.query_text, k=query.num_results)
     
@@ -23,6 +29,7 @@ def execute_search(
             )
         )
         result_urls.append(metadata.url)
+        logger.debug(f"Added result from {metadata.url} with score {score:.4f}")
     
     # Add to search history
     memory.add_to_history(
@@ -31,6 +38,7 @@ def execute_search(
         result_urls=result_urls
     )
     
+    logger.info(f"Search completed with {len(search_results)} results")
     return SearchResponse(
         results=search_results,
         query=query,
@@ -39,8 +47,10 @@ def execute_search(
 
 def show_search_history(memory: MemoryManager, limit: int = 5) -> List[dict]:
     """Show recent search history."""
+    logger.info(f"Retrieving search history with limit {limit}")
     recent_searches = memory.get_recent_searches(limit)
-    return [
+    
+    history_data = [
         {
             "query": search.query,
             "timestamp": search.timestamp,
@@ -48,4 +58,7 @@ def show_search_history(memory: MemoryManager, limit: int = 5) -> List[dict]:
             "urls": search.result_urls
         }
         for search in recent_searches
-    ] 
+    ]
+    
+    logger.info(f"Retrieved {len(history_data)} history entries")
+    return history_data 
