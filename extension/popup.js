@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!query) return;
 
     // Show loading state
-    resultsDiv.innerHTML = '<div class="loading">Searching...</div>';
+    resultsDiv.innerHTML = '<div class="loading">Searching and opening results...</div>';
 
     try {
       // Send search request to background script
@@ -27,7 +27,25 @@ document.addEventListener('DOMContentLoaded', function() {
         query: query
       });
 
-      displayResults(response.results);
+      // Open first three results automatically
+      const results = response.results;
+      if (results && results.length > 0) {
+        const urlsToOpen = results.slice(0, 3);
+        
+        // Open each URL in a new tab
+        for (const result of urlsToOpen) {
+          chrome.tabs.create({ url: result.url }, function(tab) {
+            // Send message to content script to highlight the text
+            chrome.tabs.sendMessage(tab.id, {
+              action: 'highlight',
+              text: result.snippet
+            });
+          });
+        }
+      }
+
+      // Display all results in the popup
+      displayResults(results);
     } catch (error) {
       resultsDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
     }
@@ -39,9 +57,12 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
-    const resultsHTML = results.map(result => `
+    const resultsHTML = results.map((result, index) => `
       <div class="result-item" data-url="${result.url}">
-        <div class="result-title">${result.title || 'Untitled'}</div>
+        <div class="result-title">
+          ${result.title || 'Untitled'}
+          ${index < 3 ? '<span style="color: #4CAF50; margin-left: 5px;">(Auto-opened)</span>' : ''}
+        </div>
         <div class="result-url">${result.url}</div>
         <div class="result-snippet">${result.snippet}</div>
       </div>
