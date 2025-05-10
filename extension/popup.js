@@ -38,7 +38,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Send message to content script to highlight the text
             chrome.tabs.sendMessage(tab.id, {
               action: 'highlight',
-              text: result.snippet
+              text: result.snippet,
+              query: query  // Pass the search query
             });
           });
         }
@@ -78,7 +79,8 @@ document.addEventListener('DOMContentLoaded', function() {
           // Send message to content script to highlight the text
           chrome.tabs.sendMessage(tab.id, {
             action: 'highlight',
-            text: results.find(r => r.url === url).snippet
+            text: results.find(r => r.url === url).snippet,
+            query: searchInput.value.trim()  // Pass the search query
           });
         });
       });

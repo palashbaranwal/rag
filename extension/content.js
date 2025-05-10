@@ -1,15 +1,15 @@
 // Handle messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'highlight') {
-    highlightText(request.text);
+    highlightText(request.text, request.query);
   }
 });
 
-function highlightText(text) {
+function highlightText(text, query) {
   // Remove any existing highlights
   removeHighlights();
 
-  // Create a new highlight
+  // Create a new highlight for the snippet
   const highlight = document.createElement('div');
   highlight.style.position = 'fixed';
   highlight.style.top = '0';
@@ -34,11 +34,70 @@ function highlightText(text) {
 
   document.body.appendChild(highlight);
 
+  // Highlight matching keywords in the page content
+  if (query) {
+    highlightKeywords(query);
+  }
+
   // Scroll to the highlight
   highlight.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+function highlightKeywords(query) {
+  // Split query into words
+  const keywords = query.toLowerCase().split(/\s+/);
+  
+  // Create a tree walker to traverse text nodes
+  const walker = document.createTreeWalker(
+    document.body,
+    NodeFilter.SHOW_TEXT,
+    null,
+    false
+  );
+
+  const nodesToReplace = [];
+  let node;
+
+  // Find all text nodes containing keywords
+  while (node = walker.nextNode()) {
+    const text = node.textContent;
+    const lowerText = text.toLowerCase();
+    
+    // Check if any keyword is in this text node
+    if (keywords.some(keyword => lowerText.includes(keyword))) {
+      nodesToReplace.push(node);
+    }
+  }
+
+  // Replace text nodes with highlighted versions
+  nodesToReplace.forEach(node => {
+    const span = document.createElement('span');
+    let html = node.textContent;
+    
+    // Highlight each keyword
+    keywords.forEach(keyword => {
+      const regex = new RegExp(keyword, 'gi');
+      html = html.replace(regex, match => 
+        `<span style="background-color: #ffeb3b; padding: 2px;">${match}</span>`
+      );
+    });
+    
+    span.innerHTML = html;
+    node.parentNode.replaceChild(span, node);
+  });
+}
+
 function removeHighlights() {
+  // Remove the floating highlight
   const highlights = document.querySelectorAll('div[style*="background-color: rgba(255, 255, 0, 0.3)"]');
   highlights.forEach(highlight => highlight.remove());
+
+  // Remove keyword highlights
+  const keywordHighlights = document.querySelectorAll('span[style*="background-color: #ffeb3b"]');
+  keywordHighlights.forEach(highlight => {
+    const parent = highlight.parentNode;
+    parent.replaceChild(document.createTextNode(highlight.textContent), highlight);
+    // Normalize the parent node to merge adjacent text nodes
+    parent.normalize();
+  });
 } 
